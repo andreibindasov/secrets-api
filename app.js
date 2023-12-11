@@ -1,12 +1,21 @@
 import express from "express"
 import "dotenv/config"
 import mongoose from 'mongoose'
+
+// ENCRYPTION & HASHING packages
 import encrypt from 'mongoose-encryption'
+// import md5 from 'md5'
+// import sha3_512 from 'js-sha3'
+import sha512 from 'js-sha512'
+// ...
+
+
 
 const app = express()
 const port =  process.env.PORT
 
 const userSchema = new mongoose.Schema({
+    name: String,
     email: String,
     password: String
 })
@@ -48,7 +57,8 @@ app.get("/register", (req, res)=>{
 
 app.post("/register", async (req, res)=>{
     const newUser = new User({
-        email: req.body.username,
+        name: sha512(req.body.uname),
+        email: sha512(req.body.username),
         password: req.body.password
     })
 
@@ -62,7 +72,7 @@ app.post("/register", async (req, res)=>{
 })
 
 app.post("/login", async (req, res)=>{
-    const username = req.body.username
+    const username = sha512(req.body.username)
     const password = req.body.password
 
     const user = await User.findOne({email: username})

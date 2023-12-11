@@ -1,15 +1,18 @@
 import express from "express"
 import "dotenv/config"
 import mongoose from 'mongoose'
+import encrypt from 'mongoose-encryption'
 
 const app = express()
 const port =  process.env.PORT
 
-const Schema = mongoose.Schema
-const userSchema = new Schema({
+const userSchema = new mongoose.Schema({
     email: String,
     password: String
 })
+
+const secret = process.env.SECRET
+userSchema.plugin(encrypt, {secret: secret, encryptedFields: ['password']})
 
 const User = mongoose.model('users', userSchema)
 
@@ -56,6 +59,25 @@ app.post("/register", async (req, res)=>{
     } catch (err){
         console.log(err)
     }
+})
+
+app.post("/login", async (req, res)=>{
+    const username = req.body.username
+    const password = req.body.password
+
+    const user = await User.findOne({email: username})
+    
+
+    if (user){
+        if (user.password === password) {
+            res.render("secrets")
+        } else {
+            console.log("wrong password")
+        }
+    } else {
+        console.log("no such user!")
+        res.redirect("/")
+    }   
 })
 
 app.listen(port, ()=>{

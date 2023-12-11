@@ -4,11 +4,15 @@ import mongoose from 'mongoose'
 
 // ENCRYPTION & HASHING packages
 import encrypt from 'mongoose-encryption'
-// import md5 from 'md5'
+import md5 from 'md5'
 // import sha3_512 from 'js-sha3'
 import sha512 from 'js-sha512'
 // ...
 
+// BCRYPT to hash and salt data
+import bcrypt from 'bcrypt'
+const saltRounds = 11
+// ...
 
 
 const app = express()
@@ -55,20 +59,34 @@ app.get("/register", (req, res)=>{
     res.render("register")
 })
 
-app.post("/register", async (req, res)=>{
-    const newUser = new User({
-        name: sha512(req.body.uname),
-        email: sha512(req.body.username),
-        password: req.body.password
-    })
-
-    try{
-        await newUser.save()
-        res.render("secrets")
-        console.log("new user created")
-    } catch (err){
-        console.log(err)
+app.post("/register", (req, res)=>{
+    
+    if (req.body.uname && req.body.username && req.body.password){
+        const uname = md5(req.body.uname)
+        bcrypt.hash(uname, saltRounds, (err, uname_hash) => {
+            bcrypt.hash(req.body.password, saltRounds, async (err, hash) => {
+                const newUser = new User({
+                    name: uname_hash,
+                    email: sha512(req.body.username),
+                    password: hash
+                })
+            
+                try{
+                    await newUser.save()
+                    res.render("secrets")
+                    console.log("new user created")
+                } catch (err){
+                    console.log(err)
+                }    
+            })
+        })
+    } else {
+        console.log("Invalid Input!")
+        res.render("register")
     }
+
+    
+    
 })
 
 app.post("/login", async (req, res)=>{
@@ -79,11 +97,19 @@ app.post("/login", async (req, res)=>{
     
 
     if (user){
-        if (user.password === password) {
-            res.render("secrets")
-        } else {
-            console.log("wrong password")
-        }
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (result) {
+                const loggedUser = {
+                    name: user.name,
+                    email: user.email
+                }
+                console.log(loggedUser)
+                res.render("secrets")
+             } else {
+                console.log("wrong password")
+                res.render("login")
+             }
+        })
     } else {
         console.log("no such user!")
         res.redirect("/")

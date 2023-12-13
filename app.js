@@ -45,7 +45,8 @@ function run_db () {
 const userSchema = new mongoose.Schema({
     name: String,
     email: String,
-    password: String
+    password: String,
+    secret: String
 })
 
 // const secret = process.env.SECRET
@@ -73,19 +74,50 @@ app.get("/register", (req, res)=>{
     res.render("register")
 })
 
-app.get("/secrets", (req, res)=>{
+app.get("/secrets", async (req, res)=>{
     if (req.isAuthenticated()){
-        res.render("secrets")
+        const currUsers = await User.find({"secret": {$ne:null}})
+        if (currUsers) {
+            res.render("secrets", {currUsers})
+        } else {
+            console.log('ERROR')
+        }
+        
     } else {
         res.redirect("/login")
     }
 })
+
+app.get("/submit", (req, res)=>{
+    if (req.isAuthenticated()){
+        res.render("submit")
+    } else {
+        res.redirect("/login")
+    }
+})
+
 
 app.get("/logout", (req, res, next) => {
     req.logout((err)=>{
         if (err) {return next(err)}
         res.redirect("/")
     })
+})
+
+app.post("/submit", async (req, res) => {
+    const newSecret = req.body.secret
+    const currUser = await User.findById(req.user.id)
+
+    console.log(currUser.id)
+
+    if (currUser) {
+        currUser.secret = newSecret
+        await currUser.save()
+        res.redirect("/secrets")
+    } else {
+        console.log(err)
+    }
+
 })
 
 app.post("/register", (req, res)=>{
